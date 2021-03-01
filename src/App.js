@@ -8,11 +8,20 @@ import config from './config'
 import TodoDetail from './components/TodoDetail';
 import AddForm from './components/AddForm'
 import EditForm from './components/EditForm';
+import SignIn from './components/SignIn'
+import SignUp from './components/SignUp'
+import MyMap from './components/MyMap'
+import { loadStripe } from "@stripe/stripe-js";
+import { Elements } from "@stripe/react-stripe-js";
+import CheckoutForm from "./components/CheckoutForm";
+
 
 class App extends Component {
 
   state = {
-    todos: []
+    todos: [],
+    loggedInUser: null,
+    error: null,
   }
 
   // Make sure all the initial data that you show to the user is fetched here
@@ -25,6 +34,18 @@ class App extends Component {
       .catch(() => {
         console.log('Fecthing failed')
       })
+
+    if (!this.state.loggedInUser) {
+      axios.get(`${config.API_URL}/api/user`, {withCredentials: true})
+        .then((response) => {
+            this.setState({
+              loggedInUser: response.data
+            })
+        })
+        .catch(() => {
+
+        })
+    }  
   }
 
   handleSubmit = (event) => {
@@ -75,7 +96,6 @@ class App extends Component {
 
  }
 
-
  handleEditTodo = (todo) => {
     axios.patch(`${config.API_URL}/api/todos/${todo._id}`, {
       name: todo.name,
@@ -104,20 +124,85 @@ class App extends Component {
 
  }
 
+ handleSignUp = (event) => {
+    event.preventDefault()
+    let user = {
+      username: event.target.username.value,
+      email: event.target.email.value,
+      password: event.target.password.value
+    } 
+
+    axios.post(`${config.API_URL}/api/signup`, user)
+      .then((response) => {
+          this.setState({
+            loggedInUser: response.data
+          }, () => {
+            this.props.history.push('/')
+          })
+      })
+      .catch((err) => {
+          this.setState({
+            error: err.response.data
+          })
+      })
+ }
+
+ handleSignIn = (event) => {
+  event.preventDefault()
+  let user = {
+    email: event.target.email.value,
+    password: event.target.password.value
+  } 
+
+  axios.post(`${config.API_URL}/api/signin`, user, {withCredentials: true})
+    .then((response) => {
+        this.setState({
+          loggedInUser: response.data
+        }, () => {
+          this.props.history.push('/')
+        })
+    })
+    .catch((err) => {
+        console.log('Something went wrong', err)
+    })
+ }
+
+ handleLogout = () => {
+  
+  axios.post(`${config.API_URL}/api/logout`, {}, {withCredentials: true})
+  .then(() => {
+      this.setState({
+        loggedInUser: null
+      }, () => {
+        this.props.history.push('/')
+      })
+  })
+
+ }
+
+
   render() {
-    const {todos} = this.state
+    const {todos, loggedInUser, error} = this.state
+    console.log(loggedInUser)
+    const promise = loadStripe("pk_test_51HJ0c0BfOEj3QZ8feuSBtbYIRg1Jz8vYESZmvp1SweikDC6I0M4OkpHmZjwj2A7qXVayZr5fS07Sz9mBZZb1O0fA00GrlcvlMN");
+
 
     return (
       <div>
-        <MyNav />
+        <MyNav onLogout={this.handleLogout} user={loggedInUser}/>
         <h1>Shopping List</h1>
+        {/* <Elements stripe={promise}>
+          <CheckoutForm />
+        </Elements> */}
+        {/* Invoke Map here */}
+        {/* <MyMap /> */}
+
         <Switch>
             <Route exact path="/" render={() => {
                 return <TodoList todos={todos} />
             }} />
             <Route  path="/todos/:todoId" render={(routeProps) => {
-    
-                return <TodoDetail onDelete={this.handleDelete} {...routeProps} />
+                return <TodoDetail  user={loggedInUser} onDelete={this.handleDelete} {...routeProps} />
             }} />
              <Route path="/add-form" render={() => {
                 return <AddForm onAdd={this.handleSubmit} />
@@ -125,6 +210,12 @@ class App extends Component {
             <Route  path="/todo/:todoId/edit" render={(routeProps) => {
                 return <EditForm onEdit={this.handleEditTodo} {...routeProps}/>
             }} />
+            <Route  path="/signin"  render={(routeProps) => {
+              return  <SignIn onSignIn={this.handleSignIn} {...routeProps}  />
+            }}/>
+            <Route  path="/signup"  render={(routeProps) => {
+              return  <SignUp error={error} onSignUp={this.handleSignUp} {...routeProps}  />
+            }}/>
         </Switch>
       </div>
     )

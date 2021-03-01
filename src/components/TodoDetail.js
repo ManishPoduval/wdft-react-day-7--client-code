@@ -1,7 +1,7 @@
 import axios from 'axios'
 import React, { Component } from 'react'
 import config from '../config'
-import {Link} from 'react-router-dom'
+import {Link, Redirect} from 'react-router-dom'
 
 export default class TodoDetail extends Component {
 
@@ -24,8 +24,13 @@ export default class TodoDetail extends Component {
 
   render() {
     const {todo} = this.state
-    const {onDelete} = this.props
+    const {onDelete, user} = this.props
     console.log(this.props)
+
+    if (!user) {
+        return <Redirect to={'/signin'} />
+    }
+
     return (
       <div>
         <h4>Details are:</h4>
