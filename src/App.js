@@ -14,6 +14,7 @@ import MyMap from './components/MyMap'
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements } from "@stripe/react-stripe-js";
 import CheckoutForm from "./components/CheckoutForm";
+import Chatbot from './components/Chatbot';
 
 
 class App extends Component {
@@ -52,26 +53,40 @@ class App extends Component {
     event.preventDefault()
     let name = event.target.name.value
     let description = event.target.description.value
+    let image = event.target.todoImage.files[0]
+    
+    let uploadForm = new FormData()
+    uploadForm.append('imageUrl', image)
 
-    //1. Make an API call to the server side Route to create a new todo
-    axios.post(`${config.API_URL}/api/create`, {
-      name: name,
-      description: description,
-      completed: false,
-    })
+    // send image to cloudinary
+    axios.post(`${config.API_URL}/api/upload`, uploadForm)
       .then((response) => {
-          // 2. Once the server has successfully created a new todo, update your state that is visible to the user
-          this.setState({
-            todos: [response.data, ...this.state.todos]
-          }, () => {
-            //3. Once the state is update, redirect the user to the home page
-            this.props.history.push('/')
+            //1. Make an API call to the server side Route to create a new todo
+          axios.post(`${config.API_URL}/api/create`, {
+            name: name,
+            description: description,
+            image: response.data.image, 
+            completed: false,
           })
+            .then((response) => {
+                // 2. Once the server has successfully created a new todo, update your state that is visible to the user
+                this.setState({
+                  todos: [response.data, ...this.state.todos]
+                }, () => {
+                  //3. Once the state is update, redirect the user to the home page
+                  this.props.history.push('/')
+                })
+
+            })
+            .catch((err) => {
+              console.log('Create failed', err)
+            })
+      })
+      .catch(() => {
 
       })
-      .catch((err) => {
-        console.log('Create failed', err)
-      })
+
+    
  }
 
  handleDelete = (todoId) => {
@@ -191,6 +206,7 @@ class App extends Component {
       <div>
         <MyNav onLogout={this.handleLogout} user={loggedInUser}/>
         <h1>Shopping List</h1>
+        <Chatbot />
         {/* <Elements stripe={promise}>
           <CheckoutForm />
         </Elements> */}
